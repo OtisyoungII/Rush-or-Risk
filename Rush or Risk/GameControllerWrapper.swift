@@ -5,29 +5,15 @@
 //  Created by Otis Young on 3/30/25.
 //
 
+import SwiftUI
 import UIKit
-import SpriteKit
 
-class GameViewController: UIViewController {
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        // Create the SKView
-        let skView = SKView(frame: self.view.frame)
-
-        // Create and configure the GameScene
-        let scene = GameScene(size: skView.frame.size)
-        scene.scaleMode = .resizeFill
-
-        // Present the scene
-        skView.presentScene(scene)
-
-        // Add the SKView as a subview
-        self.view.addSubview(skView)
+struct GameViewControllerWrapper: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> GameViewController {
+        return GameViewController()
     }
 
-    override var prefersStatusBarHidden: Bool {
-        return true
+    func updateUIViewController(_ uiViewController: GameViewController, context: Context) {
+        // You can update the view controller here if needed
     }
 }
