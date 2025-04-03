@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B30F39382D99D3EB000F4A55 /* Rush or Risk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Rush or Risk.app"; path = "/Users/otisyoung/Documents/Apple Academy codes/Rush or Risk/build/Debug-iphoneos/Rush or Risk.app"; sourceTree = "<absolute>"; };
+		B30F39382D99D3EB000F4A55 /* Rush or Risk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Rush or Risk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,7 +33,16 @@
 			isa = PBXGroup;
 			children = (
 				B30F393A2D99D3EB000F4A55 /* Rush or Risk */,
+				B30F39392D99D3EB000F4A55 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		B30F39392D99D3EB000F4A55 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B30F39382D99D3EB000F4A55 /* Rush or Risk.app */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -86,7 +95,7 @@
 			mainGroup = B30F392F2D99D3EB000F4A55;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = B30F392F2D99D3EB000F4A55;
+			productRefGroup = B30F39392D99D3EB000F4A55 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
