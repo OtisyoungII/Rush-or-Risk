@@ -6,22 +6,49 @@
 //
 
 import SpriteKit
-import GameplayKit
 
-class BossMoves: SKScene {
-    
-    var bossGuy: SKSpriteNode!
-    
-    // Create a method to set BossGuy from GameScene
-    func setBossGuy(boss: SKSpriteNode) {
-        self.bossGuy = boss
-        // Optionally, you can add it to the scene if needed
-        addChild(bossGuy)
+class BossMoves {
+
+    // MARK: - Properties
+    var bossGuy: SKSpriteNode
+    var scene: GameScene
+    var moveDirection: CGFloat = 1 // 1 for right, -1 for left
+    var moveSpeed: CGFloat = 5.0
+    var moveAction: SKAction?
+
+    // MARK: - Initialization
+    init(bossGuy: SKSpriteNode, scene: GameScene) {
+        self.bossGuy = bossGuy
+        self.scene = scene
+        setUpMovement()
     }
-    
-    // This method can be called when the scene is about to be shown
-    override func didMove(to view: SKView) {
-        // Do any initial setup for BossMoves here
-        // For example, if you want to change the boss's behavior in this scene, you can add actions or logic
+
+    // Set up movement actions for the boss
+    private func setUpMovement() {
+        // Create and set Boss's movement action
+        let moveLeft = SKAction.moveBy(x: -scene.frame.width + 100, y: 0, duration: 3.0) // Move left
+        let moveRight = SKAction.moveBy(x: scene.frame.width - 100, y: 0, duration: 3.0) // Move right
+        let stayInPlace = SKAction.wait(forDuration: 1.0) // Stay in place for 1 second
+        let randomMoveAction = SKAction.sequence([moveLeft, stayInPlace, moveRight, stayInPlace])
+
+        moveAction = SKAction.repeatForever(randomMoveAction)
+    }
+
+    // Function to start the boss movement
+    func startMovement() {
+        if let action = moveAction {
+            bossGuy.run(action)
+        }
+    }
+
+    // Function to stop the boss movement
+    func stopMovement() {
+        bossGuy.removeAllActions()
+    }
+
+    // Update function to manage boss behavior over time
+    func update() {
+        // You can add additional behaviors here, like bomb dropping, fake outs, etc.
+        // For example, every few seconds, the boss could drop bombs or attack
     }
 }
