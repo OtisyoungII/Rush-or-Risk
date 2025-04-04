@@ -18,6 +18,10 @@ struct PhysicsCategory {
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
 
+    private var pausedLogic: PausedLogic!
+    
+    
+    
     // MARK: - Properties
     var paddle: SKSpriteNode!
     var scoreLabel: SKLabelNode!
@@ -81,31 +85,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         lifeLabel.position = CGPoint(x: frame.maxX - 100, y: frame.height - 80)
         addChild(lifeLabel)
 
-        // Initialize DroppinBombs and PaddleMoves before use
+        // Initialize DroppinBombs before use
         droppinBombs = DroppinBombs(scene: self)
 
-        // Set up gravity and physics world
-        physicsWorld.gravity = CGVector(dx: 0, dy: -1)
-        physicsWorld.contactDelegate = self
-
-        // Create BossGuy sprite
-        bossGuy = SKSpriteNode(imageNamed: "BossGuy")
-        bossGuy.size = CGSize(width: 100, height: 100)
-        bossGuy.position = CGPoint(x: frame.midX, y: frame.height - 150)
-        addChild(bossGuy)
-
-        // Initialize BossMoves and start movement
-        bossMoves = BossMoves(bossGuy: bossGuy, scene: self)
-        bossMoves.startMovement()
-
-        // Pause Button Setup
+        // Set up the Pause Button
         pauseButton = SKSpriteNode(imageNamed: "PauseButt")
         pauseButton.position = CGPoint(x: frame.maxX - 70, y: frame.height - 175)
         pauseButton.name = "PauseButt"
         pauseButton.size = CGSize(width: 100, height: 100)
         addChild(pauseButton)
 
-        // Ready Again Button (Initially Hidden)
+        // Set up Ready Again Button (Initially Hidden)
         readyAgainButton = SKSpriteNode(color: .blue, size: CGSize(width: 150, height: 50))
         readyAgainButton.position = CGPoint(x: frame.midX, y: frame.midY - 100)
         readyAgainButton.name = "readyAgainButton"
@@ -116,6 +106,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         readyAgainButton.addChild(readyLabel)
         readyAgainButton.isHidden = true
         addChild(readyAgainButton)
+
+        // Initialize Boss Moves and start movement
+        bossGuy = SKSpriteNode(imageNamed: "BossGuy")
+        bossGuy.size = CGSize(width: 100, height: 100)
+        bossGuy.position = CGPoint(x: frame.midX, y: frame.height - 150)
+        addChild(bossGuy)
+
+        bossMoves = BossMoves(bossGuy: bossGuy, scene: self)
+        bossMoves.startMovement()
+
+        // Initialize PausedLogic after setting up the buttons and other elements
+        pausedLogic = PausedLogic(scene: self, pauseButton: pauseButton, readyAgainButton: readyAgainButton, bossMoves: bossMoves, droppinBombs: droppinBombs)
+
+        // Set up gravity and physics world
+        physicsWorld.gravity = CGVector(dx: 0, dy: -1)
+        physicsWorld.contactDelegate = self
     }
 
     // MARK: - Game Over Logic
@@ -128,6 +134,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if let touch = touches.first {
             let touchLocation = touch.location(in: self)
             paddleMoves.movePaddle(to: touchLocation)
+            pausedLogic.handleTouches(touches: touches, in: self)
         }
     }
 
@@ -148,14 +155,50 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func handleBombCollision(_ bomb: SKSpriteNode) {
         // Handle logic when bomb hits the paddle
         bomb.removeFromParent()
-        lives -= 1
-        lifeLabel.text = "Lives: \(lives)"
+        score += 1
+        scoreLabel.text = "Score: \(score)"
 
-        if lives <= 0 {
+        if score <= 200 {
             gameOver()
         }
     }
 
+        
+        // MARK: - Reset Game Logic
+        func resetGame() {
+            // Reset the score and lives
+            score = 0
+            lives = 3
+            scoreLabel.text = "Score: \(score)"
+            lifeLabel.text = "Lives: \(lives)"
+            
+            // Reset the paddle position
+            if let paddle = childNode(withName: "paddle") as? SKSpriteNode {
+                paddle.position = CGPoint(x: frame.midX, y: 50)
+            }
+            
+            // Remove all bombs and reset any bomb-related logic
+            droppinBombs.cleanup()  // Make sure bombs are removed
+            droppinBombs = DroppinBombs(scene: self) // Reinitialize DroppinBombs
+            // Optionally, you can reset the bomb count and interval as well
+            droppinBombs.cleanup()
+            droppinBombs.startBombTimer()
+
+            // Reset the boss to its initial state
+            bossGuy.position = CGPoint(x: frame.midX, y: frame.height - 150)
+            
+            // Restart the boss movement
+            bossMoves.startMovement()
+            
+            // Make the game elements visible again
+            readyAgainButton.isHidden = true
+            pauseButton.isHidden = false
+            
+            // Optionally: Any other reset logic for game elements like obstacles, enemies, etc.
+            
+            // You could also reset any animations or effects that were in progress
+        }
+    
     // MARK: - Update Function for Boss Behavior
     override func update(_ currentTime: TimeInterval) {
         // Check for missed bombs and trigger explosion if needed
@@ -163,3 +206,4 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bossMoves.update()  // Manage bomb drops or other boss-specific actions
     }
 }
+

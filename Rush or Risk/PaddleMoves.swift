@@ -27,6 +27,7 @@ class PaddleMoves {
         
         // Update the paddle's position
         paddle.position = CGPoint(x: newX, y: paddle.position.y)
+        
     }
 }
 

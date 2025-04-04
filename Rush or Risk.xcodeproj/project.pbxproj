@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B30F39382D99D3EB000F4A55 /* Rush or Risk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Rush or Risk.app"; path = "/Users/otisyoung/Documents/Apple Academy codes/Rush or Risk/build/Debug-iphoneos/Rush or Risk.app"; sourceTree = "<absolute>"; };
+		B34DE9D72D9E3523003E6C7A /* Rush or Risk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Rush or Risk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,6 +33,7 @@
 			isa = PBXGroup;
 			children = (
 				B30F393A2D99D3EB000F4A55 /* Rush or Risk */,
+				B34DE9D72D9E3523003E6C7A /* Rush or Risk.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,7 +59,7 @@
 			packageProductDependencies = (
 			);
 			productName = "Rush or Risk";
-			productReference = B30F39382D99D3EB000F4A55 /* Rush or Risk.app */;
+			productReference = B34DE9D72D9E3523003E6C7A /* Rush or Risk.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -243,6 +244,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Rush or Risk/Preview Content\"";
+				DEVELOPMENT_TEAM = 525SRF9A35;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -271,6 +273,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Rush or Risk/Preview Content\"";
+				DEVELOPMENT_TEAM = 525SRF9A35;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
