@@ -134,8 +134,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if let touch = touches.first {
             let touchLocation = touch.location(in: self)
             paddleMoves.movePaddle(to: touchLocation)
-            pausedLogic.handleTouches(touches: touches, in: self)
+            
         }
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        pausedLogic.handleTouches(touches: touches, in: self)
     }
 
     // MARK: - Collision Detection
