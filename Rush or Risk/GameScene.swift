@@ -117,8 +117,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bossMoves.startMovement()
 
         // Initialize PausedLogic after setting up the buttons and other elements
-        pausedLogic = PausedLogic(scene: self, pauseButton: pauseButton, readyAgainButton: readyAgainButton, bossMoves: bossMoves, droppinBombs: droppinBombs)
-
+        pausedLogic = PausedLogic(scene: self, pauseButton: pauseButton, readyAgainButton: readyAgainButton, bossMoves: bossMoves, droppinBombs: droppinBombs, paddleMoves: paddleMoves, physicsWorld: physicsWorld)
+        
+        
+        
         // Set up gravity and physics world
         physicsWorld.gravity = CGVector(dx: 0, dy: -1)
         physicsWorld.contactDelegate = self
@@ -160,12 +162,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bomb.removeFromParent()
         score += 1
         scoreLabel.text = "Score: \(score)"
-
+        
         if score <= 200 {
             gameOver()
         }
-    }
-
+        if (lives != 0){
+                
+                
+                gameOver()
+            }
+        }
+    
         
         // MARK: - Reset Game Logic
         func resetGame() {
@@ -183,8 +190,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             // Remove all bombs and reset any bomb-related logic
             droppinBombs.cleanup()  // Make sure bombs are removed
             droppinBombs = DroppinBombs(scene: self) // Reinitialize DroppinBombs
-            // Optionally, you can reset the bomb count and interval as well
-            droppinBombs.cleanup()
+            // you can reset the bomb count and interval as well
             droppinBombs.startBombTimer()
 
             // Reset the boss to its initial state

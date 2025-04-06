@@ -94,7 +94,7 @@ class DroppinBombs: GKState {
     }
     
     // MARK: - Timer Management
-     func startBombTimer() {
+    func startBombTimer() {
         // Only start the bomb timer if the game is not paused
         if !isPaused {
             bombTimer = Timer.scheduledTimer(timeInterval: bombDropInterval, target: self, selector: #selector(dropBomb), userInfo: nil, repeats: true)
@@ -147,13 +147,27 @@ class DroppinBombs: GKState {
     }
     
     // MARK: - Pause/Resume
+    
     func pause() {
         isPaused = true
-        stopBombTimer()
+        stopBombTimer() // Stop bomb drop timer
+        
+        // Pause bomb gravity and stop the movement
+        for bomb in bombs {
+            bomb.physicsBody?.affectedByGravity = false
+            bomb.physicsBody?.velocity = CGVector(dx: 0, dy: 0) // Stop bomb movement
+        }
     }
     
     func resume() {
         isPaused = false
-        startBombTimer()
+        startBombTimer() // Resume bomb drop timer
+        
+        // Resume bomb gravity and ensure they fall again
+        for bomb in bombs {
+            bomb.physicsBody?.affectedByGravity = true
+            bomb.physicsBody?.velocity = CGVector(dx: 0, dy: -500) // Resume fall with a reasonable speed
+        }
     }
 }
+

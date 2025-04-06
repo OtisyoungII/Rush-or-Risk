@@ -14,18 +14,22 @@ class PausedLogic {
     private var isPaused: Bool
     private var bossMoves: BossMoves
     private var droppinBombs: DroppinBombs
+    private var paddleMoves: PaddleMoves // This stores PaddleMoves, not SKSpriteNode
+    private var physicsWorld: SKPhysicsWorld
     
-    // Initialization with DroppinBombs added
-    init(scene: GameScene, pauseButton: SKSpriteNode, readyAgainButton: SKSpriteNode, bossMoves: BossMoves, droppinBombs: DroppinBombs) {
+    // Initialization with PaddleMoves object
+    init(scene: GameScene, pauseButton: SKSpriteNode, readyAgainButton: SKSpriteNode, bossMoves: BossMoves, droppinBombs: DroppinBombs, paddleMoves: PaddleMoves, physicsWorld: SKPhysicsWorld) {
         self.scene = scene
         self.pauseButton = pauseButton
         self.readyAgainButton = readyAgainButton
         self.bossMoves = bossMoves
         self.droppinBombs = droppinBombs
         self.isPaused = false
+        self.paddleMoves = paddleMoves
+        self.physicsWorld = physicsWorld
     }
     
-    // Handle Touches (same as before)
+    // Handle Touches
     func handleTouches(touches: Set<UITouch>, in scene: SKScene) {
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: scene)
@@ -36,10 +40,10 @@ class PausedLogic {
             return
         }
         
-        // Ready Again Button
-//        if readyAgainButton.contains(touchLocation) {
-//            resetGame()
-//        }
+        // Ready Again Button (commented out in your code)
+        // if readyAgainButton.contains(touchLocation) {
+        //     resetGame()
+        // }
         
         // Prevent Paddle Movement if Game is Paused
         if isPaused {
@@ -48,9 +52,9 @@ class PausedLogic {
         
         // Move the paddle (Catcher)
         let location = touch.location(in: scene)
-        if let paddle = scene.childNode(withName: "paddle") as? SKSpriteNode {
-            paddle.position.x = location.x
-        }
+        
+        // Access paddle from PaddleMoves
+        paddleMoves.movePaddle(to: location)
     }
     
     // Toggle Pause State and Update Bomb and Boss Movement
@@ -62,14 +66,23 @@ class PausedLogic {
             pauseButton.texture = SKTexture(imageNamed: "PressedPause")
             bossMoves.stopMovement()
             droppinBombs.pause()  // Stop the bombs from dropping
+            // Stop gravity when paused
+            physicsWorld.gravity = CGVector(dx: 0, dy: 0)
+            // Optionally, stop other physics interactions (like the paddle and bombs)
+            paddleMoves.paddle.physicsBody?.isDynamic = false  // Pause paddle physics
         } else {
             pauseButton.texture = SKTexture(imageNamed: "PauseButt")
             bossMoves.startMovement()
             droppinBombs.resume()  // Resume the bomb dropping
+            // Restore gravity when unpaused
+            physicsWorld.gravity = CGVector(dx: 0, dy: -1)
         }
-    }
+            // Re-enable the paddle physics
+            paddleMoves.paddle.physicsBody?.isDynamic = true
+        }
+    
     
     private func resetGame() {
-      scene.resetGame()
-   }
+        scene.resetGame()
+    }
 }
