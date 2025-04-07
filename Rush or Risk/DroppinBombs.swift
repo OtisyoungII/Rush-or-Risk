@@ -8,9 +8,6 @@
 import SpriteKit
 import GameplayKit
 
-import SpriteKit
-import GameplayKit
-
 class DroppinBombs: GKState {
     
     var scene: GameScene!
@@ -23,6 +20,7 @@ class DroppinBombs: GKState {
     private var bombs: [SKSpriteNode] = []
     
     private var isPaused = false // Track the paused state
+    var BombPopper: Bool = false  // You can modify this condition based on your game logic
     
     // Initialize with a scene and stateMachine from the superclass
     init(scene: GameScene) {
@@ -107,6 +105,39 @@ class DroppinBombs: GKState {
         bombTimer = nil
     }
     
+    func stopAllBombs() {
+        // Stop all bombs from falling (removes actions, stops gravity)
+        for bomb in bombs {
+            bomb.physicsBody?.affectedByGravity = false
+            bomb.removeAllActions()  // Stop any actions (like falling)
+        }
+        bombs.removeAll() // Optionally remove all bombs from the scene
+    }
+    
+    func explodeBombsInOrder() {
+        // Sort bombs by their y position (bottom to top)
+        let sortedBombs = bombs.sorted { $0.position.y < $1.position.y }
+        
+        // Trigger explosion for each bomb in order
+        for (index, bomb) in sortedBombs.enumerated() {
+            // Delay each explosion to create the "explosion from bottom to top" effect
+            let delay = Double(index) * 0.2  // Adjust the delay as needed
+            let triggerAction = SKAction.sequence([
+                SKAction.wait(forDuration: delay),
+                SKAction.run {
+                    self.triggerExplosion(at: bomb.position)
+                    bomb.removeFromParent()
+                }
+            ])
+            
+            // Run the trigger explosion action
+            bomb.run(triggerAction)
+        }
+        
+        // Optionally, clear the bombs array after the explosions
+        bombs.removeAll()
+    }
+    
     // MARK: - Cleanup
     func cleanup() {
         bombTimer?.invalidate()
@@ -117,19 +148,20 @@ class DroppinBombs: GKState {
         // Track bombs to be removed
         var bombsToRemove: [SKSpriteNode] = []
         
+        // You can call stopAllBombs() if a specific condition is met (e.g., game over or user input)
+        if BombPopper { // Replace with your condition
+            stopAllBombs()
+            explodeBombsInOrder()  // Trigger the explosions from bottom to top
+        }
+        
+        // Handle bomb falling off-screen
         for bomb in bombs {
             if bomb.position.y < 0 {
-                // Trigger explosion at bomb's position
                 triggerExplosion(at: bomb.position)
-                
-                // Add bomb to the removal list
                 bombsToRemove.append(bomb)
-                
-                // Lose a life when a bomb is missed
                 scene.lives -= 1
                 scene.lifeLabel.text = "Lives: \(scene.lives)"
                 
-                // Check if game over
                 if scene.lives <= 0 {
                     scene.gameOver()
                     break // Stop processing bombs when game over
@@ -139,9 +171,9 @@ class DroppinBombs: GKState {
         
         // Remove bombs that fell off-screen and missed
         for bomb in bombsToRemove {
-            bomb.removeFromParent()  // Remove from the scene
+            bomb.removeFromParent()
             if let index = bombs.firstIndex(of: bomb) {
-                bombs.remove(at: index)  // Remove from the bombs array
+                bombs.remove(at: index)
             }
         }
     }
@@ -169,5 +201,5 @@ class DroppinBombs: GKState {
             bomb.physicsBody?.velocity = CGVector(dx: 0, dy: -500) // Resume fall with a reasonable speed
         }
     }
+    
 }
-

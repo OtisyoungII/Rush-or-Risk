@@ -58,28 +58,25 @@ class PausedLogic {
     }
     
     // Toggle Pause State and Update Bomb and Boss Movement
+    // Toggle Pause State and Update Bomb and Boss Movement
     private func togglePauseState() {
         isPaused = !isPaused
         
         // Pause the game elements
         if isPaused {
             pauseButton.texture = SKTexture(imageNamed: "PressedPause")
-            bossMoves.stopMovement()
-            droppinBombs.pause()  // Stop the bombs from dropping
-            // Stop gravity when paused
-            physicsWorld.gravity = CGVector(dx: 0, dy: 0)
-            // Optionally, stop other physics interactions (like the paddle and bombs)
+            bossMoves.stopMovement() // Stop boss movement
+            droppinBombs.pause()  // Stop bomb dropping
+            physicsWorld.gravity = CGVector(dx: 0, dy: 0) // Stop gravity
             paddleMoves.paddle.physicsBody?.isDynamic = false  // Pause paddle physics
         } else {
             pauseButton.texture = SKTexture(imageNamed: "PauseButt")
-            bossMoves.startMovement()
-            droppinBombs.resume()  // Resume the bomb dropping
-            // Restore gravity when unpaused
-            physicsWorld.gravity = CGVector(dx: 0, dy: -1)
+            bossMoves.startMovement() // Resume boss movement
+            droppinBombs.resume()  // Resume bomb dropping
+            physicsWorld.gravity = CGVector(dx: 0, dy: -1) // Restore gravity
+            paddleMoves.paddle.physicsBody?.isDynamic = true  // Resume paddle physics
         }
-            // Re-enable the paddle physics
-            paddleMoves.paddle.physicsBody?.isDynamic = true
-        }
+    }
     
     
     private func resetGame() {

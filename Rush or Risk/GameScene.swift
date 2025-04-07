@@ -8,12 +8,14 @@
 import SpriteKit
 import GameplayKit
 
+
 // MARK: - Physics Categories
 struct PhysicsCategory {
     static let None: UInt32 = 0
     static let Paddle: UInt32 = 0b1       // 1
     static let Bomb: UInt32 = 0b10        // 2
     static let Explosion: UInt32 = 0b100  // 4
+    static let Ground: UInt32 = 0b1000    // 8, this could represent the ground or any object bombs should detect
 }
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
@@ -49,6 +51,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let safeArea = view.safeAreaInsets
         screenWidth = frame.width
         safeAreaWidth = screenWidth - safeArea.left - safeArea.right
+        physicsWorld.contactDelegate = self
 
         // Set up the background
         let backdrop = SKSpriteNode(imageNamed: "BackDrop")
@@ -162,16 +165,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bomb.removeFromParent()
         score += 1
         scoreLabel.text = "Score: \(score)"
+    }
+
+    // Method to be called when a bomb passes the paddle
+    func bombMissed() {
+        // Trigger explosions in the bombs that are still in the scene
+        droppinBombs.explodeBombsInOrder()
+        lives -= 1
+        lifeLabel.text = "Lives: \(lives)"
         
-        if score <= 200 {
+        if lives <= 0 {
             gameOver()
         }
-        if (lives != 0){
-                
-                
-                gameOver()
-            }
-        }
+    }
     
         
         // MARK: - Reset Game Logic
@@ -210,9 +216,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: - Update Function for Boss Behavior
     override func update(_ currentTime: TimeInterval) {
-        // Check for missed bombs and trigger explosion if needed
         droppinBombs.update()
-        bossMoves.update()  // Manage bomb drops or other boss-specific actions
+        bossMoves.update()
     }
 }
 
