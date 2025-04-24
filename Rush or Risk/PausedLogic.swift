@@ -68,13 +68,17 @@ class PausedLogic {
             bossMoves.stopMovement() // Stop boss movement
             droppinBombs.pause()  // Stop bomb dropping
             physicsWorld.gravity = CGVector(dx: 0, dy: 0) // Stop gravity
-            paddleMoves.paddle.physicsBody?.isDynamic = false  // Pause paddle physics
+            paddleMoves.paddle.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
+            paddleMoves.paddle.physicsBody?.affectedByGravity = false
+            paddleMoves.paddle.isPaused = true  // Pause paddle physics
         } else {
             pauseButton.texture = SKTexture(imageNamed: "PauseButt")
             bossMoves.startMovement() // Resume boss movement
             droppinBombs.resume()  // Resume bomb dropping
             physicsWorld.gravity = CGVector(dx: 0, dy: -1) // Restore gravity
-            paddleMoves.paddle.physicsBody?.isDynamic = true  // Resume paddle physics
+            paddleMoves.paddle.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
+            paddleMoves.paddle.physicsBody?.affectedByGravity = false
+            paddleMoves.paddle.isPaused = true  // Resume paddle physics
         }
     }
     
