@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B3EA363A2E13F8FC00168C84 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = B3EA36392E13F8FC00168C84 /* FirebaseAI */; };
+		B3EA363C2E13F8FC00168C84 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B3EA363B2E13F8FC00168C84 /* FirebaseAnalytics */; };
+		B3EA363E2E13F8FC00168C84 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3EA363D2E13F8FC00168C84 /* FirebaseAnalyticsCore */; };
+		B3EA36402E13F8FC00168C84 /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = B3EA363F2E13F8FC00168C84 /* FirebaseAnalyticsIdentitySupport */; };
+		B3EA36422E13F8FC00168C84 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */ = {isa = PBXBuildFile; productRef = B3EA36412E13F8FC00168C84 /* FirebaseAnalyticsOnDeviceConversion */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		B34DE9D72D9E3523003E6C7A /* Rush or Risk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Rush or Risk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +31,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3EA36402E13F8FC00168C84 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				B3EA363C2E13F8FC00168C84 /* FirebaseAnalytics in Frameworks */,
+				B3EA36422E13F8FC00168C84 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
+				B3EA363E2E13F8FC00168C84 /* FirebaseAnalyticsCore in Frameworks */,
+				B3EA363A2E13F8FC00168C84 /* FirebaseAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,6 +70,11 @@
 			);
 			name = "Rush or Risk";
 			packageProductDependencies = (
+				B3EA36392E13F8FC00168C84 /* FirebaseAI */,
+				B3EA363B2E13F8FC00168C84 /* FirebaseAnalytics */,
+				B3EA363D2E13F8FC00168C84 /* FirebaseAnalyticsCore */,
+				B3EA363F2E13F8FC00168C84 /* FirebaseAnalyticsIdentitySupport */,
+				B3EA36412E13F8FC00168C84 /* FirebaseAnalyticsOnDeviceConversion */,
 			);
 			productName = "Rush or Risk";
 			productReference = B34DE9D72D9E3523003E6C7A /* Rush or Risk.app */;
@@ -86,6 +104,9 @@
 			);
 			mainGroup = B30F392F2D99D3EB000F4A55;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B30F392F2D99D3EB000F4A55;
 			projectDirPath = "";
@@ -316,6 +337,45 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B3EA36392E13F8FC00168C84 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		B3EA363B2E13F8FC00168C84 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		B3EA363D2E13F8FC00168C84 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		B3EA363F2E13F8FC00168C84 /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		B3EA36412E13F8FC00168C84 /* FirebaseAnalyticsOnDeviceConversion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3EA36382E13F8FC00168C84 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsOnDeviceConversion;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B30F39302D99D3EB000F4A55 /* Project object */;
 }

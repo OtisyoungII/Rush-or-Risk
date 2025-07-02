@@ -40,10 +40,8 @@ class PausedLogic {
             return
         }
         
-        // Ready Again Button (commented out in your code)
-        // if readyAgainButton.contains(touchLocation) {
-        //     resetGame()
-        // }
+       
+      
         
         // Prevent Paddle Movement if Game is Paused
         if isPaused {
@@ -58,7 +56,7 @@ class PausedLogic {
     }
     
     // Toggle Pause State and Update Bomb and Boss Movement
-    // Toggle Pause State and Update Bomb and Boss Movement
+
     private func togglePauseState() {
         isPaused = !isPaused
         

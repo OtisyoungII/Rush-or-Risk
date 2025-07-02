@@ -20,7 +20,7 @@ class DroppinBombs: GKState {
     private var bombs: [SKSpriteNode] = []
     
     private var isPaused = false // Track the paused state
-    var BombPopper: Bool = false  // You can modify this condition based on your game logic
+    var BombPopper: Bool = false  //  modify this condition based on the game logic
     
     // Initialize with a scene and stateMachine from the superclass
     init(scene: GameScene) {
