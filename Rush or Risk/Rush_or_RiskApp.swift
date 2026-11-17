@@ -11,7 +11,12 @@ import SwiftUI
 struct Rush_or_RiskApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if ProcessInfo.processInfo.arguments.contains("-startGame") {
+                GameViewControllerWrapper()
+                    .statusBarHidden(true)
+            } else {
+                ContentView()
+            }
         }
     }
 }

@@ -1,223 +1,344 @@
-//
-//  GameScene.swift
-//  Rush or Risk
-//
-//  Created by Otis Young on 3/30/25.
-//
-
 import SpriteKit
-import GameplayKit
+import UIKit
 
-
-// MARK: - Physics Categories
 struct PhysicsCategory {
-    static let None: UInt32 = 0
-    static let Paddle: UInt32 = 0b1       // 1
-    static let Bomb: UInt32 = 0b10        // 2
-    static let Explosion: UInt32 = 0b100  // 4
-    static let Ground: UInt32 = 0b1000    // 8, this could represent the ground or any object bombs should detect
+    static let none: UInt32 = 0
+    static let paddle: UInt32 = 1 << 0
+    static let record: UInt32 = 1 << 1
 }
 
-class GameScene: SKScene, SKPhysicsContactDelegate {
+final class GameScene: SKScene, SKPhysicsContactDelegate {
+    private let session = GameSession()
+    private var activeRecords: [UUID: SKSpriteNode] = [:]
+    private var previousUpdateTime: TimeInterval?
+    private var spawnAccumulator: TimeInterval = 0
+    private var bossDirection: CGFloat = 1
+    private var playableRect: CGRect = .zero
+    private var hasCompletedInitialLayout = false
+#if DEBUG
+    private let deterministicSmokeMode = ProcessInfo.processInfo.arguments.contains("-deterministicSmoke")
+#else
+    private let deterministicSmokeMode = false
+#endif
 
-    private var pausedLogic: PausedLogic!
-    
-    
-    
-    // MARK: - Properties
-    var paddle: SKSpriteNode!
-    var scoreLabel: SKLabelNode!
-    var score = 0
-    var lifeLabel: SKLabelNode!
-    var lives = 3
-    var bossGuy: SKSpriteNode!
-    var screenWidth: CGFloat!
-    var safeAreaWidth: CGFloat!
+    private(set) var paddle = SKSpriteNode(imageNamed: "Catcher")
+    private(set) var bossGuy = SKSpriteNode(imageNamed: "BossGuy")
+    private let backdrop = SKSpriteNode(imageNamed: "BackDrop")
+    private let scoreLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    private let lifeLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    private let statusLabel = SKLabelNode(fontNamed: "AvenirNext-Heavy")
+    private let pauseButton = SKSpriteNode(imageNamed: "PauseButt")
+    private let restartButton = SKShapeNode(rectOf: CGSize(width: 190, height: 58), cornerRadius: 18)
+    private let restartLabel = SKLabelNode(fontNamed: "AvenirNext-Bold")
 
-    // MARK: - UI Elements
-    var readyAgainButton: SKSpriteNode!
-    var pauseButton: SKSpriteNode!
-
-    // Paddle movement manager
-    var paddleMoves: PaddleMoves!
-    var droppinBombs: DroppinBombs!
-
-    // Boss movement logic (instance of BossMoves)
-    var bossMoves: BossMoves!
-
-    // MARK: - Scene Setup
     override func didMove(to view: SKView) {
-        // Get the safe area width to ensure the Boss stays within bounds
-        let safeArea = view.safeAreaInsets
-        screenWidth = frame.width
-        safeAreaWidth = screenWidth - safeArea.left - safeArea.right
+        backgroundColor = .black
+        physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
+        configureNodes()
+        updateLayout()
+        session.start()
+        refreshHUD()
+    }
 
-        // Set up the background
-        let backdrop = SKSpriteNode(imageNamed: "BackDrop")
-        backdrop.position = CGPoint(x: frame.midX, y: frame.midY)
-        backdrop.zPosition = -1
-        backdrop.size = CGSize(width: screenWidth, height: frame.height)
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        updateLayout()
+    }
+
+    private func configureNodes() {
+        guard backdrop.parent == nil else { return }
+        backdrop.zPosition = -10
         addChild(backdrop)
 
-        // Set up paddle (Catcher asset)
-        paddle = SKSpriteNode(imageNamed: "Catcher")
-        paddle.size = CGSize(width: 100, height: 20)
-        paddle.position = CGPoint(x: frame.midX, y: 50)
-        paddle.physicsBody = SKPhysicsBody(rectangleOf: paddle.size)
-        paddle.physicsBody?.isDynamic = false
-        paddle.physicsBody?.categoryBitMask = PhysicsCategory.Paddle
-        paddle.physicsBody?.contactTestBitMask = PhysicsCategory.Bomb
-        paddle.physicsBody?.collisionBitMask = 0
-        addChild(paddle)
-
-        // Set up PaddleMoves to handle paddle movement
-        paddleMoves = PaddleMoves(paddle: paddle, screenWidth: screenWidth)
-
-        // Set up score label
-        scoreLabel = SKLabelNode(text: "Score: 0")
-        scoreLabel.fontSize = 32
-        scoreLabel.fontColor = .black
-        scoreLabel.position = CGPoint(x: frame.maxX - 100, y: frame.height - 40)
-        addChild(scoreLabel)
-
-        // Set up life label
-        lifeLabel = SKLabelNode(text: "Lives: \(lives)")
-        lifeLabel.fontSize = 32
-        lifeLabel.fontColor = .black
-        lifeLabel.position = CGPoint(x: frame.maxX - 100, y: frame.height - 80)
-        addChild(lifeLabel)
-
-        // Initialize DroppinBombs before use
-        droppinBombs = DroppinBombs(scene: self)
-
-        // Set up the Pause Button
-        pauseButton = SKSpriteNode(imageNamed: "PauseButt")
-        pauseButton.position = CGPoint(x: frame.maxX - 70, y: frame.height - 175)
-        pauseButton.name = "PauseButt"
-        pauseButton.size = CGSize(width: 100, height: 100)
-        addChild(pauseButton)
-
-        // Set up Ready Again Button (Initially Hidden)
-        readyAgainButton = SKSpriteNode(color: .blue, size: CGSize(width: 150, height: 50))
-        readyAgainButton.position = CGPoint(x: frame.midX, y: frame.midY - 100)
-        readyAgainButton.name = "readyAgainButton"
-        let readyLabel = SKLabelNode(text: "Ready Again?")
-        readyLabel.fontSize = 24
-        readyLabel.fontColor = .white
-        readyLabel.position = CGPoint(x: 0, y: 0)
-        readyAgainButton.addChild(readyLabel)
-        readyAgainButton.isHidden = true
-        addChild(readyAgainButton)
-
-        // Initialize Boss Moves and start movement
-        bossGuy = SKSpriteNode(imageNamed: "BossGuy")
-        bossGuy.size = CGSize(width: 100, height: 100)
-        bossGuy.position = CGPoint(x: frame.midX, y: frame.height - 150)
+        bossGuy.name = "boss"
+        bossGuy.zPosition = 2
         addChild(bossGuy)
 
-        bossMoves = BossMoves(bossGuy: bossGuy, scene: self)
-        bossMoves.startMovement()
+        paddle.name = "paddle"
+        paddle.zPosition = 3
+        addChild(paddle)
 
-        // Initialize PausedLogic after setting up the buttons and other elements
-        pausedLogic = PausedLogic(scene: self, pauseButton: pauseButton, readyAgainButton: readyAgainButton, bossMoves: bossMoves, droppinBombs: droppinBombs, paddleMoves: paddleMoves, physicsWorld: physicsWorld)
-        
-        
-        
-        // Set up gravity and physics world
-        physicsWorld.gravity = CGVector(dx: 0, dy: -1)
-        physicsWorld.contactDelegate = self
-    }
-
-    // MARK: - Game Over Logic
-    func gameOver() {
-        print("Game Over!")
-    }
-
-    // MARK: - Paddle Movement
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let touch = touches.first {
-            let touchLocation = touch.location(in: self)
-            paddleMoves.movePaddle(to: touchLocation)
-            
+        [scoreLabel, lifeLabel, statusLabel].forEach {
+            $0.zPosition = 20
+            $0.fontColor = .white
+            $0.verticalAlignmentMode = .center
+            addChild($0)
         }
-    }
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        pausedLogic.handleTouches(touches: touches, in: self)
+        scoreLabel.horizontalAlignmentMode = .left
+        lifeLabel.horizontalAlignmentMode = .right
+        statusLabel.horizontalAlignmentMode = .center
+
+        pauseButton.name = "pauseButton"
+        pauseButton.zPosition = 20
+        addChild(pauseButton)
+
+        restartButton.name = "restartButton"
+        restartButton.fillColor = UIColor(red: 0.03, green: 0.42, blue: 0.90, alpha: 0.95)
+        restartButton.strokeColor = .white
+        restartButton.lineWidth = 2
+        restartButton.zPosition = 30
+        restartButton.isHidden = true
+        addChild(restartButton)
+        statusLabel.isHidden = true
+
+        restartLabel.text = "Play Again"
+        restartLabel.name = "restartButton"
+        restartLabel.fontSize = 25
+        restartLabel.fontColor = .white
+        restartLabel.verticalAlignmentMode = .center
+        restartButton.addChild(restartLabel)
     }
 
-    // MARK: - Collision Detection
-    func didBegin(_ contact: SKPhysicsContact) {
-        // Handle collision between paddle and bomb
-        if contact.bodyA.categoryBitMask == PhysicsCategory.Paddle && contact.bodyB.categoryBitMask == PhysicsCategory.Bomb {
-            if let bomb = contact.bodyB.node as? SKSpriteNode {
-                handleBombCollision(bomb)
-            }
-        } else if contact.bodyB.categoryBitMask == PhysicsCategory.Paddle && contact.bodyA.categoryBitMask == PhysicsCategory.Bomb {
-            if let bomb = contact.bodyA.node as? SKSpriteNode {
-                handleBombCollision(bomb)
-            }
+    private func updateLayout() {
+        guard let view, size.width > 1, size.height > 1 else { return }
+        let insets = view.safeAreaInsets
+        playableRect = CGRect(
+            x: frame.minX + insets.left,
+            y: frame.minY + insets.bottom,
+            width: max(1, frame.width - insets.left - insets.right),
+            height: max(1, frame.height - insets.top - insets.bottom)
+        )
+
+        backdrop.position = CGPoint(x: frame.midX, y: frame.midY)
+        let textureSize = backdrop.texture?.size() ?? CGSize(width: 1, height: 1)
+        let scale = max(frame.width / textureSize.width, frame.height / textureSize.height)
+        backdrop.size = CGSize(width: textureSize.width * scale, height: textureSize.height * scale)
+
+        let unit = min(playableRect.width, playableRect.height)
+        bossGuy.size = CGSize(width: unit * 0.14, height: unit * 0.14)
+        paddle.size = CGSize(width: min(138, playableRect.width * 0.29), height: 32)
+        pauseButton.size = CGSize(width: 52, height: 52)
+
+        let topY = playableRect.maxY - 34
+        scoreLabel.fontSize = min(28, playableRect.width * 0.055)
+        lifeLabel.fontSize = scoreLabel.fontSize
+        statusLabel.fontSize = min(34, playableRect.width * 0.07)
+        scoreLabel.position = CGPoint(x: playableRect.minX + 16, y: topY)
+        lifeLabel.position = CGPoint(x: playableRect.maxX - 16, y: topY)
+        pauseButton.position = CGPoint(x: playableRect.maxX - 34, y: topY - 58)
+        statusLabel.position = CGPoint(x: playableRect.midX, y: playableRect.midY + 42)
+        restartButton.position = CGPoint(x: playableRect.midX, y: playableRect.midY - 38)
+
+        bossGuy.position.y = playableRect.maxY - max(125, bossGuy.size.height)
+        paddle.position.y = playableRect.minY + 44
+        if hasCompletedInitialLayout {
+            bossGuy.position.x = clamp(bossGuy.position.x,
+                                       min: playableRect.minX + bossGuy.size.width / 2,
+                                       max: playableRect.maxX - bossGuy.size.width / 2)
+            paddle.position.x = clamp(paddle.position.x,
+                                      min: playableRect.minX + paddle.size.width / 2,
+                                      max: playableRect.maxX - paddle.size.width / 2)
+        } else {
+            bossGuy.position.x = playableRect.midX
+            paddle.position.x = playableRect.midX
+            hasCompletedInitialLayout = true
         }
+        configurePaddlePhysics()
     }
 
-    func handleBombCollision(_ bomb: SKSpriteNode) {
-        // Handle logic when bomb hits the paddle
-        bomb.removeFromParent()
-        score += 1
-        scoreLabel.text = "Score: \(score)"
+    private func configurePaddlePhysics() {
+        paddle.physicsBody = SKPhysicsBody(rectangleOf: paddle.size)
+        paddle.physicsBody?.isDynamic = false
+        paddle.physicsBody?.categoryBitMask = PhysicsCategory.paddle
+        paddle.physicsBody?.contactTestBitMask = PhysicsCategory.record
+        paddle.physicsBody?.collisionBitMask = PhysicsCategory.none
     }
 
-    // Method to be called when a bomb passes the paddle
-    func bombMissed() {
-        // Trigger explosions in the bombs that are still in the scene
-        droppinBombs.explodeBombsInOrder()
-        lives -= 1
-        lifeLabel.text = "Lives: \(lives)"
-        
-        if lives <= 0 {
-            gameOver()
-        }
-    }
-    
-        
-        // MARK: - Reset Game Logic
-        func resetGame() {
-            // Reset the score and lives
-            score = 0
-            lives = 3
-            scoreLabel.text = "Score: \(score)"
-            lifeLabel.text = "Lives: \(lives)"
-            
-            // Reset the paddle position
-            if let paddle = childNode(withName: "paddle") as? SKSpriteNode {
-                paddle.position = CGPoint(x: frame.midX, y: 50)
-            }
-            
-            // Remove all bombs and reset any bomb-related logic
-            droppinBombs.cleanup()  // Make sure bombs are removed
-            droppinBombs = DroppinBombs(scene: self) // Reinitialize DroppinBombs
-            // you can reset the bomb count and interval as well
-            droppinBombs.startBombTimer()
-
-            // Reset the boss to its initial state
-            bossGuy.position = CGPoint(x: frame.midX, y: frame.height - 150)
-            
-            // Restart the boss movement
-            bossMoves.startMovement()
-            
-            // Make the game elements visible again
-            readyAgainButton.isHidden = true
-            pauseButton.isHidden = false
-            
-            // Optionally: Any other reset logic for game elements like obstacles, enemies, etc.
-            
-            // You could also reset any animations or effects that were in progress
-        }
-    
-    // MARK: - Update Function for Boss Behavior
     override func update(_ currentTime: TimeInterval) {
-        droppinBombs.update()
-        bossMoves.update()
-    }
-}
+        guard session.phase == .playing else {
+            previousUpdateTime = currentTime
+            return
+        }
+        let rawDelta = previousUpdateTime.map { currentTime - $0 } ?? 0
+        let delta = max(0, min(rawDelta, 0.1))
+        previousUpdateTime = currentTime
+        session.advance(by: delta)
 
+        let difficulty = GameDifficulty.value(at: session.elapsedTime)
+        updateBoss(deltaTime: delta, speed: difficulty.bossSpeed)
+        updateSpawning(deltaTime: delta, difficulty: difficulty)
+        updateRecords(deltaTime: delta, speed: difficulty.recordSpeed)
+    }
+
+    private func updateBoss(deltaTime: TimeInterval, speed: CGFloat) {
+        guard deltaTime > 0 else { return }
+        if deterministicSmokeMode {
+            bossGuy.position.x = paddle.position.x
+            return
+        }
+        let halfWidth = bossGuy.size.width / 2
+        let minX = playableRect.minX + halfWidth
+        let maxX = playableRect.maxX - halfWidth
+        var proposedX = bossGuy.position.x + bossDirection * speed * CGFloat(deltaTime)
+        if proposedX >= maxX {
+            proposedX = maxX
+            bossDirection = -1
+        } else if proposedX <= minX {
+            proposedX = minX
+            bossDirection = 1
+        }
+        bossGuy.position.x = proposedX
+    }
+
+    private func updateSpawning(deltaTime: TimeInterval, difficulty: GameDifficulty) {
+        spawnAccumulator += deltaTime
+        while spawnAccumulator >= difficulty.spawnInterval {
+            spawnAccumulator -= difficulty.spawnInterval
+            for _ in 0..<difficulty.simultaneousRecords { spawnRecord() }
+        }
+    }
+
+    private func spawnRecord() {
+        let id = UUID()
+        let record = SKSpriteNode(imageNamed: "Records")
+        record.name = "record"
+        record.size = CGSize(width: 42, height: 42)
+        let spread = deterministicSmokeMode ? 0 : bossGuy.size.width * 0.35
+        let originX = deterministicSmokeMode ? paddle.position.x : bossGuy.position.x
+        record.position = CGPoint(
+            x: clamp(originX + CGFloat.random(in: -spread...spread),
+                     min: playableRect.minX + record.size.width / 2,
+                     max: playableRect.maxX - record.size.width / 2),
+            y: bossGuy.frame.minY - record.size.height / 2
+        )
+        record.zPosition = 4
+        record.userData = ["recordID": id.uuidString]
+        record.physicsBody = SKPhysicsBody(rectangleOf: record.size)
+        record.physicsBody?.isDynamic = false
+        record.physicsBody?.categoryBitMask = PhysicsCategory.record
+        record.physicsBody?.contactTestBitMask = PhysicsCategory.paddle
+        record.physicsBody?.collisionBitMask = PhysicsCategory.none
+        addChild(record)
+        activeRecords[id] = record
+    }
+
+    private func updateRecords(deltaTime: TimeInterval, speed: CGFloat) {
+        guard deltaTime > 0 else { return }
+        for (id, record) in activeRecords {
+            let previousFrame = record.frame
+            record.position.y -= speed * CGFloat(deltaTime)
+            let overlapsPaddle = record.frame.intersects(paddle.frame)
+            let crossedCatchLine = previousFrame.minY >= paddle.frame.maxY &&
+                record.frame.minY <= paddle.frame.maxY &&
+                record.frame.maxX >= paddle.frame.minX && record.frame.minX <= paddle.frame.maxX
+            if overlapsPaddle || crossedCatchLine {
+                resolveRecord(id: id, outcome: .caught)
+            } else if record.frame.maxY < playableRect.minY {
+                resolveRecord(id: id, outcome: .missed)
+            }
+        }
+    }
+
+    func didBegin(_ contact: SKPhysicsContact) {
+        let nodes = [contact.bodyA.node, contact.bodyB.node]
+        guard let record = nodes.compactMap({ $0 }).first(where: { $0.name == "record" }),
+              let id = recordID(for: record) else { return }
+        resolveRecord(id: id, outcome: .caught)
+    }
+
+    private func recordID(for node: SKNode) -> UUID? {
+        guard let value = node.userData?["recordID"] as? String else { return nil }
+        return UUID(uuidString: value)
+    }
+
+    private func resolveRecord(id: UUID, outcome: RecordOutcome) {
+        guard let record = activeRecords[id], session.resolve(recordID: id, outcome: outcome) else { return }
+        activeRecords.removeValue(forKey: id)
+        switch outcome {
+        case .caught:
+            let burst = SKAction.group([.scale(to: 1.35, duration: 0.06), .fadeOut(withDuration: 0.08)])
+            record.run(.sequence([burst, .removeFromParent()]))
+        case .missed:
+            showExplosion(at: CGPoint(x: record.position.x, y: playableRect.minY + 22))
+            record.removeFromParent()
+        }
+        refreshHUD()
+        if session.phase == .gameOver { presentGameOver() }
+    }
+
+    private func showExplosion(at position: CGPoint) {
+        let textures = ["Explosion1", "Explosion2", "Explosion3"].map(SKTexture.init(imageNamed:))
+        let explosion = SKSpriteNode(texture: textures[0])
+        explosion.position = position
+        explosion.size = CGSize(width: 86, height: 86)
+        explosion.zPosition = 12
+        addChild(explosion)
+        explosion.run(.sequence([.animate(with: textures, timePerFrame: 0.07), .removeFromParent()]))
+    }
+
+    func pauseGame() {
+        guard session.pause() else { return }
+        pauseButton.texture = SKTexture(imageNamed: "PressedPause")
+        statusLabel.text = "PAUSED"
+        statusLabel.isHidden = false
+    }
+
+    func resumeGame() {
+        guard session.resume() else { return }
+        pauseButton.texture = SKTexture(imageNamed: "PauseButt")
+        statusLabel.isHidden = true
+        previousUpdateTime = nil
+    }
+
+    func restartGame() {
+        activeRecords.values.forEach { $0.removeFromParent() }
+        activeRecords.removeAll(keepingCapacity: true)
+        session.restart()
+        spawnAccumulator = 0
+        previousUpdateTime = nil
+        bossDirection = 1
+        bossGuy.position.x = playableRect.midX
+        paddle.position.x = playableRect.midX
+        statusLabel.isHidden = true
+        restartButton.isHidden = true
+        pauseButton.isHidden = false
+        pauseButton.texture = SKTexture(imageNamed: "PauseButt")
+        refreshHUD()
+    }
+
+    private func presentGameOver() {
+        activeRecords.values.forEach { $0.removeFromParent() }
+        activeRecords.removeAll()
+        statusLabel.text = "GAME OVER"
+        statusLabel.isHidden = false
+        restartButton.isHidden = false
+        pauseButton.isHidden = true
+    }
+
+    private func refreshHUD() {
+        scoreLabel.text = "Score  \(session.score)"
+        lifeLabel.text = "Lives  \(session.lives)"
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let location = touches.first?.location(in: self) else { return }
+        let tappedNodes = nodes(at: location)
+        if tappedNodes.contains(where: { $0.name == "restartButton" }) {
+            restartGame()
+        } else if tappedNodes.contains(where: { $0.name == "pauseButton" }) {
+            session.phase == .paused ? resumeGame() : pauseGame()
+        } else {
+            movePaddle(to: location.x)
+        }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let x = touches.first?.location(in: self).x { movePaddle(to: x) }
+    }
+
+    private func movePaddle(to x: CGFloat) {
+        guard session.phase == .playing else { return }
+        paddle.position.x = clamp(x,
+                                  min: playableRect.minX + paddle.size.width / 2,
+                                  max: playableRect.maxX - paddle.size.width / 2)
+    }
+
+    private func clamp(_ value: CGFloat, min minimum: CGFloat, max maximum: CGFloat) -> CGFloat {
+        Swift.min(Swift.max(value, minimum), maximum)
+    }
+
+    var lives: Int { session.lives }
+    func gameOver() { presentGameOver() }
+    func resetGame() { restartGame() }
+}

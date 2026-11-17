@@ -13,43 +13,33 @@ struct ContentView: View {
             ZStack {
                 Image("RushorRiskHome")
                     .resizable()
-                    .ignoresSafeArea(.all)
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
 
                 VStack {
-//                    Image("Bomb")
-//                        .resizable()
-//                        .ignoresSafeArea(.all)
-//                        .frame(width: 50, height: 40)
-//                        .shadow(color: .white, radius: 20)
-//                        .padding()
-//                        .padding()
+                    Spacer()
 
-                    Divider()
-                    Divider()
-                    Divider()
-                    Divider()
-                    Divider()
-                    Divider()
-                    Divider()
-
-                    NavigationLink(destination: GameViewControllerWrapper()) {
+                    NavigationLink(destination: GameViewControllerWrapper().statusBarHidden(true)) {
                         Text("Start Game")
-                            .font(.title)
-                            .padding()
-                            .background(Color.blue)
+                            .font(.title.bold())
+                            .padding(.horizontal, 34)
+                            .padding(.vertical, 16)
+                            .background(Color.blue.opacity(0.95))
                             .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .shadow(color: .white, radius: 20)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white, lineWidth: 2))
+                            .shadow(color: .black.opacity(0.7), radius: 12, y: 5)
                     }
+                    .accessibilityIdentifier("startGameButton")
+                    .padding(.bottom, 54)
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
 
-#Preview {
-    ContentView()
-}
 
 #Preview {
     ContentView()
