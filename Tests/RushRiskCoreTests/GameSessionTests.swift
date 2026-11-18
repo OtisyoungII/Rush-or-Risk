@@ -21,7 +21,7 @@ final class GameSessionTests: XCTestCase {
 
         XCTAssertTrue(session.resolve(recordID: recordID, outcome: .caught))
         XCTAssertFalse(session.resolve(recordID: recordID, outcome: .missed))
-        XCTAssertEqual(session.score, 1)
+        XCTAssertEqual(session.score, 10)
         XCTAssertEqual(session.lives, 3)
     }
 
@@ -85,7 +85,7 @@ final class GameSessionTests: XCTestCase {
 
     func testTenConsecutiveGameplaySessionsRemainClean() {
         for _ in 0..<10 {
-            let session = GameSession()
+            let session = GameSession(mode: .endless)
             session.start()
 
             for frame in 0..<900 {
@@ -99,7 +99,9 @@ final class GameSessionTests: XCTestCase {
             XCTAssertGreaterThan(session.score, 25)
 
             session.restart()
-            XCTAssertEqual(session.snapshot, GameSnapshot(phase: .playing, score: 0, lives: 3, streak: 0, elapsedTime: 0))
+        XCTAssertEqual(session.snapshot, GameSnapshot(phase: .playing, score: 0, lives: 3, streak: 0,
+                                                      highestCombo: 0, elapsedTime: 0,
+                                                      objectiveProgress: 0, objectiveTarget: 90))
         }
     }
 }

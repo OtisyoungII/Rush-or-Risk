@@ -1,6 +1,6 @@
 import Foundation
 
-enum GamePhase: Equatable { case ready, playing, paused, gameOver }
+enum GamePhase: Equatable { case ready, playing, paused, levelComplete, gameOver }
 enum RecordOutcome { case caught, missed }
 
 struct GameSnapshot: Equatable {
@@ -8,25 +8,44 @@ struct GameSnapshot: Equatable {
     let score: Int
     let lives: Int
     let streak: Int
+    let highestCombo: Int
     let elapsedTime: TimeInterval
+    let objectiveProgress: Int
+    let objectiveTarget: Int
 }
 
 final class GameSession {
     private(set) var phase: GamePhase = .ready
-    private(set) var score = 0
     private(set) var lives: Int
-    private(set) var streak = 0
     private(set) var elapsedTime: TimeInterval = 0
+    private(set) var caughtCount = 0
+    private(set) var missedCount = 0
+    private(set) var scoreManager = ScoreManager()
     private var resolvedRecordIDs: Set<UUID> = []
-    let maximumLives: Int
 
-    init(maximumLives: Int = 3) {
+    let maximumLives: Int
+    let mode: GameMode
+    let level: LevelDefinition
+
+    init(maximumLives: Int = 3, mode: GameMode = .level(1)) {
         self.maximumLives = max(1, maximumLives)
         self.lives = max(1, maximumLives)
+        self.mode = mode
+        self.level = LevelDefinition.level(mode.levelNumber)
+    }
+
+    var score: Int { scoreManager.score }
+    var streak: Int { scoreManager.streak }
+    var highestCombo: Int { scoreManager.highestCombo }
+    var multiplier: Int { scoreManager.multiplier }
+    var perfect: Bool { missedCount == 0 }
+    var objectiveProgress: Int {
+        mode == .endless ? score : (level.objective == .catches ? caughtCount : min(level.target, Int(elapsedTime)))
     }
 
     var snapshot: GameSnapshot {
-        GameSnapshot(phase: phase, score: score, lives: lives, streak: streak, elapsedTime: elapsedTime)
+        GameSnapshot(phase: phase, score: score, lives: lives, streak: streak, highestCombo: highestCombo,
+                     elapsedTime: elapsedTime, objectiveProgress: objectiveProgress, objectiveTarget: level.target)
     }
 
     func start() { if phase == .ready { phase = .playing } }
@@ -46,6 +65,7 @@ final class GameSession {
     func advance(by deltaTime: TimeInterval) {
         guard phase == .playing, deltaTime.isFinite, deltaTime > 0 else { return }
         elapsedTime += min(deltaTime, 0.1)
+        evaluateCompletion()
     }
 
     @discardableResult func resolve(recordID: UUID, outcome: RecordOutcome) -> Bool {
@@ -53,22 +73,34 @@ final class GameSession {
         resolvedRecordIDs.insert(recordID)
         switch outcome {
         case .caught:
-            streak += 1
-            score += 1 + min(streak / 10, 4)
+            caughtCount += 1
+            _ = scoreManager.caught()
         case .missed:
-            streak = 0
+            missedCount += 1
+            scoreManager.missed()
             lives = max(0, lives - 1)
             if lives == 0 { phase = .gameOver }
         }
+        evaluateCompletion()
         return true
+    }
+
+    private func evaluateCompletion() {
+        guard phase == .playing, mode != .endless else { return }
+        let complete = level.objective == .catches ? caughtCount >= level.target : elapsedTime + 0.000_001 >= Double(level.target)
+        if complete {
+            _ = scoreManager.complete(level: level, perfect: perfect)
+            phase = .levelComplete
+        }
     }
 
     func restart() {
         phase = .playing
-        score = 0
         lives = maximumLives
-        streak = 0
         elapsedTime = 0
+        caughtCount = 0
+        missedCount = 0
+        scoreManager.reset()
         resolvedRecordIDs.removeAll(keepingCapacity: true)
     }
 }
