@@ -2,22 +2,20 @@ import AVFoundation
 import Foundation
 
 enum ArcadeSound: CaseIterable, Hashable { case catchRecord, miss, combo, levelComplete, gameOver }
-enum MusicContext: Hashable { case menu, gameplay }
 
 final class AudioManager {
     static let shared = AudioManager()
     private var musicPlayer: AVAudioPlayer?
     private var currentMusic: MusicContext?
     private var requestedMusic: MusicContext?
+    private var activeMusicLease: MusicLease?
+    private var nextMusicLeaseID: UInt64 = 0
     private var effectPlayers: [AVAudioPlayer] = []
     private var settings = SettingsStore().value
     private var isSuspended = false
+    private var isInterrupted = false
     private let automationSilent: Bool
 
-    private lazy var musicData: [MusicContext: Data] = [
-        .menu: Self.waveData(notes: [110, 146.83, 164.81, 146.83], noteDuration: 0.28, amplitude: 0.045),
-        .gameplay: Self.waveData(notes: [110, 146.83, 164.81, 146.83, 130.81, 174.61, 196, 174.61], noteDuration: 0.24, amplitude: 0.05)
-    ]
     private lazy var effectData: [ArcadeSound: Data] = Dictionary(uniqueKeysWithValues: ArcadeSound.allCases.map { sound in
         let definition: ([Double], Double)
         switch sound {
@@ -27,7 +25,7 @@ final class AudioManager {
         case .levelComplete: definition = ([523.25, 659.25, 783.99, 1046.5], 0.12)
         case .gameOver: definition = ([293.66, 246.94, 196, 146.83], 0.18)
         }
-        return (sound, Self.waveData(notes: definition.0, noteDuration: definition.1, amplitude: 0.065))
+        return (sound, Self.waveData(notes: definition.0, noteDuration: definition.1, amplitude: 0.16))
     })
 
     private var canPlay: Bool { settings.audioEnabled && !automationSilent }
@@ -36,8 +34,13 @@ final class AudioManager {
         automationSilent = AudioPlaybackPolicy.isAutomation(arguments: processInfo.arguments, environment: processInfo.environment)
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
             guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-                  AVAudioSession.InterruptionType(rawValue: raw) == .began else { return }
-            self?.suspendAll()
+                  let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+            if type == .began {
+                self?.beginInterruption()
+            } else {
+                let rawOptions = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                self?.endInterruption(shouldResume: AVAudioSession.InterruptionOptions(rawValue: rawOptions).contains(.shouldResume))
+            }
         }
         NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] note in
             guard let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
@@ -47,30 +50,56 @@ final class AudioManager {
     }
 
     func apply(_ value: GameSettings) {
+        let wasEnabled = canPlay
         settings = value
-        musicPlayer?.volume = Float(min(0.25, max(0, value.musicVolume)))
-        if !canPlay { stopAll() }
+        musicPlayer?.setVolume(Float(MusicTrackDefinition.playerGain(for: value.musicVolume)), fadeDuration: 0.2)
+        if !canPlay {
+            stopPlaybackPreservingRequest()
+        } else if !wasEnabled, !isSuspended, let requestedMusic {
+            ensureMusicPlayback(requestedMusic)
+        }
     }
 
-    func startMusic(_ context: MusicContext) {
+    @discardableResult
+    func startMusic(_ context: MusicContext) -> MusicLease {
+        nextMusicLeaseID &+= 1
+        let lease = MusicLease(id: nextMusicLeaseID)
+        activeMusicLease = lease
         requestedMusic = context
         isSuspended = false
-        guard canPlay, settings.musicVolume > 0 else { stopMusicPlayer(); return }
+        ensureMusicPlayback(context)
+        return lease
+    }
+
+    private func ensureMusicPlayback(_ context: MusicContext) {
+        guard canPlay, !isInterrupted, settings.musicVolume > 0 else { stopMusicPlayer(); return }
         if currentMusic == context, let musicPlayer {
-            if !musicPlayer.isPlaying { musicPlayer.play() }
+            if !musicPlayer.isPlaying {
+                guard activateSession(), musicPlayer.play() else { stopMusicPlayer(); return }
+            }
             return
         }
         stopMusicPlayer()
-        guard activateSession(), let data = musicData[context], let player = try? AVAudioPlayer(data: data) else { return }
+        let track = MusicTrackDefinition.definition(for: context)
+        guard activateSession(),
+              let url = Bundle.main.url(forResource: track.resourceName, withExtension: "wav"),
+              let player = try? AVAudioPlayer(contentsOf: url) else { return }
         player.numberOfLoops = -1
-        player.volume = Float(min(0.25, max(0, settings.musicVolume)))
+        player.volume = 0
         player.prepareToPlay()
         musicPlayer = player
         currentMusic = context
-        player.play()
+        if player.play() {
+            player.setVolume(Float(MusicTrackDefinition.playerGain(for: settings.musicVolume)), fadeDuration: 0.35)
+        } else { stopMusicPlayer() }
     }
 
-    func stopMusic() { requestedMusic = nil; stopMusicPlayer() }
+    func stopMusic(_ lease: MusicLease? = nil) {
+        if let lease, lease != activeMusicLease { return }
+        activeMusicLease = nil
+        requestedMusic = nil
+        stopMusicPlayer()
+    }
 
     func suspendAll() {
         isSuspended = true
@@ -80,13 +109,27 @@ final class AudioManager {
 
     func resumeAppropriateMusic() {
         isSuspended = false
-        guard canPlay, let requestedMusic else { return }
-        startMusic(requestedMusic)
+        guard canPlay, !isInterrupted, let requestedMusic else { return }
+        ensureMusicPlayback(requestedMusic)
+    }
+
+    private func beginInterruption() {
+        isInterrupted = true
+        musicPlayer?.pause()
+        stopEffects()
+    }
+
+    private func endInterruption(shouldResume: Bool) {
+        isInterrupted = false
+        guard shouldResume, !isSuspended, canPlay, let requestedMusic else { return }
+        ensureMusicPlayback(requestedMusic)
     }
 
     func stopAll() {
+        activeMusicLease = nil
         requestedMusic = nil
         isSuspended = true
+        isInterrupted = false
         stopMusicPlayer()
         stopEffects()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -113,6 +156,11 @@ final class AudioManager {
 
     private func stopMusicPlayer() { musicPlayer?.stop(); musicPlayer = nil; currentMusic = nil }
     private func stopEffects() { effectPlayers.forEach { $0.stop() }; effectPlayers.removeAll() }
+    private func stopPlaybackPreservingRequest() {
+        stopMusicPlayer()
+        stopEffects()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
 
     private static func waveData(notes: [Double], noteDuration: Double, amplitude: Double) -> Data {
         let sampleRate = 22_050

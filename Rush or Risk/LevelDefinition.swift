@@ -48,17 +48,17 @@ struct LevelDefinition: Codable, Equatable, Identifiable {
             (.doubleTrouble, .catches, 28, [.double, .staggered]),
             (.doubleTrouble, .catches, 32, [.double, .alternating]),
             (.doubleTrouble, .survival, 45, [.double, .sweep]),
-            (.rushHour, .catches, 36, [.mixed, .double]),
-            (.rushHour, .catches, 40, [.mixed, .staggered]),
-            (.rushHour, .survival, 55, [.mixed, .burst]),
-            (.rhythmBreaker, .catches, 42, [.fakeout, .staggered]),
-            (.rhythmBreaker, .catches, 46, [.fakeout, .mixed]),
-            (.rhythmBreaker, .survival, 60, [.fakeout, .burst]),
-            (.detroitAfterDark, .catches, 50, [.mixed, .burst, .double]),
-            (.detroitAfterDark, .catches, 55, [.fakeout, .burst, .sweep]),
-            (.detroitAfterDark, .survival, 70, [.mixed, .burst, .fakeout]),
-            (.finalMix, .catches, 60, SpawnPattern.allCases),
-            (.finalMix, .survival, 90, SpawnPattern.allCases)
+            (.rushHour, .catches, 32, [.mixed, .double]),
+            (.rushHour, .catches, 34, [.mixed, .staggered]),
+            (.rushHour, .survival, 42, [.mixed, .burst]),
+            (.rhythmBreaker, .catches, 34, [.fakeout, .staggered]),
+            (.rhythmBreaker, .catches, 36, [.fakeout, .mixed]),
+            (.rhythmBreaker, .survival, 45, [.fakeout, .burst]),
+            (.detroitAfterDark, .catches, 38, [.mixed, .burst, .double]),
+            (.detroitAfterDark, .catches, 40, [.fakeout, .burst, .sweep]),
+            (.detroitAfterDark, .survival, 50, [.mixed, .burst, .fakeout]),
+            (.finalMix, .catches, 44, SpawnPattern.allCases),
+            (.finalMix, .survival, 60, SpawnPattern.allCases)
         ]
         return specifications.enumerated().map { index, item in
             let level = index + 1

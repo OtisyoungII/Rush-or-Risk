@@ -83,8 +83,6 @@ class GameViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        gameScene.pauseGame()
-        AudioManager.shared.stopAll()
         if let previousPopGestureState {
             navigationController?.interactivePopGestureRecognizer?.isEnabled = previousPopGestureState
         }

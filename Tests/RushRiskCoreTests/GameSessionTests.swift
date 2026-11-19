@@ -92,7 +92,7 @@ final class GameSessionTests: XCTestCase {
                 session.advance(by: frame.isMultiple(of: 2) ? 1.0 / 60.0 : 1.0 / 120.0)
             }
             for _ in 0..<25 { session.resolve(recordID: UUID(), outcome: .caught) }
-            for _ in 0..<3 { session.resolve(recordID: UUID(), outcome: .missed) }
+            for _ in 0..<4 { session.resolve(recordID: UUID(), outcome: .missed) }
 
             XCTAssertEqual(session.phase, .gameOver)
             XCTAssertEqual(session.lives, 0)
@@ -101,7 +101,7 @@ final class GameSessionTests: XCTestCase {
             session.restart()
         XCTAssertEqual(session.snapshot, GameSnapshot(phase: .playing, score: 0, lives: 3, streak: 0,
                                                       highestCombo: 0, elapsedTime: 0,
-                                                      objectiveProgress: 0, objectiveTarget: 90))
+                                                      objectiveProgress: 0, objectiveTarget: 60))
         }
     }
 }
