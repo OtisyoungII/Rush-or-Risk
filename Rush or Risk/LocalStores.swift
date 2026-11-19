@@ -39,10 +39,40 @@ final class HighScoreStore {
 }
 
 struct GameSettings: Codable, Equatable {
-    var musicVolume: Double = 0.65
-    var effectsVolume: Double = 0.8
-    var hapticsEnabled = true
-    var reducedMotion = false
+    var audioEnabled: Bool
+    var musicVolume: Double
+    var effectsVolume: Double
+    var hapticsEnabled: Bool
+    var reducedMotion: Bool
+
+    init(audioEnabled: Bool = false, musicVolume: Double = 0.15, effectsVolume: Double = 0.2,
+         hapticsEnabled: Bool = true, reducedMotion: Bool = false) {
+        self.audioEnabled = audioEnabled
+        self.musicVolume = min(0.25, max(0, musicVolume))
+        self.effectsVolume = min(0.3, max(0, effectsVolume))
+        self.hapticsEnabled = hapticsEnabled
+        self.reducedMotion = reducedMotion
+    }
+
+    private enum CodingKeys: String, CodingKey { case audioEnabled, musicVolume, effectsVolume, hapticsEnabled, reducedMotion }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            audioEnabled: try values.decodeIfPresent(Bool.self, forKey: .audioEnabled) ?? false,
+            musicVolume: try values.decodeIfPresent(Double.self, forKey: .musicVolume) ?? 0.15,
+            effectsVolume: try values.decodeIfPresent(Double.self, forKey: .effectsVolume) ?? 0.2,
+            hapticsEnabled: try values.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true,
+            reducedMotion: try values.decodeIfPresent(Bool.self, forKey: .reducedMotion) ?? false
+        )
+    }
+}
+
+enum AudioPlaybackPolicy {
+    static func isAutomation(arguments: [String], environment: [String: String]) -> Bool {
+        arguments.contains("-deterministicSmoke") || arguments.contains("-uiTesting") ||
+        arguments.contains("-silentAudio") || environment["XCTestConfigurationFilePath"] != nil
+    }
 }
 
 final class SettingsStore {

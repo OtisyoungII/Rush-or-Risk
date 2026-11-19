@@ -9,11 +9,17 @@ import SwiftUI
 import UIKit
 
 struct GameViewControllerWrapper: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    let mode: GameMode
+
+    init(mode: GameMode = .level(1)) { self.mode = mode }
+
     func makeUIViewController(context: Context) -> GameViewController {
-        return GameViewController()
+        let controller = GameViewController(mode: mode)
+        controller.onExit = { dismiss() }
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: GameViewController, context: Context) {
-        // You can update the view controller here if needed
     }
 }

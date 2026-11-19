@@ -18,7 +18,7 @@ let package = Package(
             ],
             sources: [
                 "GameSession.swift", "GameDifficulty.swift", "LevelDefinition.swift",
-                "SpawnDirector.swift", "ScoreManager.swift", "LocalStores.swift"
+                "SpawnDirector.swift", "ScoreManager.swift", "LocalStores.swift", "GameplayLayout.swift"
             ]
         ),
         .testTarget(

@@ -2,6 +2,36 @@ import XCTest
 @testable import RushRiskCore
 
 final class ArcadeExperienceTests: XCTestCase {
+    func testLandscapeArenaRespectsSafeAreasAndLeavesCompactHUD() {
+        for size in [CGSize(width: 844, height: 390), CGSize(width: 1024, height: 768), CGSize(width: 600, height: 400)] {
+            let layout = GameplayLayout(viewSize: size, safeInsets: .init(top: 0, left: 59, bottom: 21, right: 59))
+            XCTAssertTrue(layout.safeRect.contains(layout.arenaRect))
+            XCTAssertLessThanOrEqual(layout.hudHeight, 78)
+            XCTAssertGreaterThan(layout.arenaRect.width, layout.arenaRect.height)
+            XCTAssertGreaterThan(layout.arenaRect.height, 200)
+        }
+    }
+
+    func testCatcherTouchMovementIsBoundedToArena() {
+        let layout = GameplayLayout(viewSize: .init(width: 844, height: 390), safeInsets: .init(top: 0, left: 59, bottom: 21, right: 59))
+        let width: CGFloat = 140
+        XCTAssertEqual(layout.boundedCatcherX(-10_000, catcherWidth: width), layout.arenaRect.minX + width / 2)
+        XCTAssertEqual(layout.boundedCatcherX(10_000, catcherWidth: width), layout.arenaRect.maxX - width / 2)
+        XCTAssertEqual(layout.boundedCatcherX(layout.arenaRect.midX, catcherWidth: width), layout.arenaRect.midX)
+    }
+
+    func testTapMovementApproachesTargetWithoutTeleporting() {
+        let layout = GameplayLayout(viewSize: .init(width: 844, height: 390), safeInsets: .init(top: 0, left: 59, bottom: 21, right: 59))
+        let start = layout.arenaRect.midX
+        let target = layout.arenaRect.maxX
+        let firstFrame = layout.nextCatcherX(current: start, target: target, catcherWidth: 140, deltaTime: 1.0 / 60.0)
+        XCTAssertGreaterThan(firstFrame, start)
+        XCTAssertLessThan(firstFrame, layout.boundedCatcherX(target, catcherWidth: 140))
+        var position = start
+        for _ in 0..<60 { position = layout.nextCatcherX(current: position, target: target, catcherWidth: 140, deltaTime: 1.0 / 60.0) }
+        XCTAssertEqual(position, layout.boundedCatcherX(target, catcherWidth: 140), accuracy: 0.5)
+    }
+
     func testTwentyLevelsAreOrderedBoundedAndWinnable() {
         XCTAssertEqual(LevelDefinition.all.count, 20)
         XCTAssertEqual(LevelDefinition.all.map(\.id), Array(1...20))
@@ -107,5 +137,20 @@ final class ArcadeExperienceTests: XCTestCase {
         store.value = .init(musicVolume: 0.2, effectsVolume: 0.9, hapticsEnabled: false, reducedMotion: true)
         XCTAssertEqual(SettingsStore(defaults: defaults).value,
                        .init(musicVolume: 0.2, effectsVolume: 0.9, hapticsEnabled: false, reducedMotion: true))
+    }
+
+    func testAudioDefaultsMutedAndAutomationAlwaysSilent() {
+        XCTAssertFalse(GameSettings().audioEnabled)
+        XCTAssertTrue(AudioPlaybackPolicy.isAutomation(arguments: ["app", "-deterministicSmoke"], environment: [:]))
+        XCTAssertTrue(AudioPlaybackPolicy.isAutomation(arguments: ["app"], environment: ["XCTestConfigurationFilePath": "test.xctestconfiguration"]))
+        XCTAssertFalse(AudioPlaybackPolicy.isAutomation(arguments: ["app"], environment: [:]))
+    }
+
+    func testLegacySettingsMigrateToMutedAudio() throws {
+        let legacy = Data(#"{"musicVolume":0.8,"effectsVolume":0.9,"hapticsEnabled":true,"reducedMotion":false}"#.utf8)
+        let migrated = try JSONDecoder().decode(GameSettings.self, from: legacy)
+        XCTAssertFalse(migrated.audioEnabled)
+        XCTAssertEqual(migrated.musicVolume, 0.25)
+        XCTAssertEqual(migrated.effectsVolume, 0.3)
     }
 }

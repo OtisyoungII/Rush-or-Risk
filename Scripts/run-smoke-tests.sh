@@ -28,16 +28,18 @@ xcodebuild \
 app_path="$repo_dir/build/SmokeDerivedData/Build/Products/Debug-iphonesimulator/Rush or Risk.app"
 xcrun simctl install "$device_id" "$app_path"
 
+level_rotation=(1 10 19 6 14 20 3 12 18 1)
 for session_number in {1..10}; do
+  level_number=${level_rotation[$session_number]}
   xcrun simctl terminate "$device_id" com.APLDEVO.Rush-or-Risk 2>/dev/null || true
-  launch_output=$(xcrun simctl launch "$device_id" com.APLDEVO.Rush-or-Risk -startGame -deterministicSmoke)
+  launch_output=$(xcrun simctl launch "$device_id" com.APLDEVO.Rush-or-Risk -startGame -level "$level_number" -deterministicSmoke)
   app_pid=${launch_output##*: }
   sleep 4
   if ! ps -p "$app_pid" >/dev/null; then
     echo "Gameplay session $session_number failed (pid $app_pid exited)."
     exit 1
   fi
-  echo "Gameplay session $session_number passed."
+  echo "Gameplay session $session_number (level $level_number) passed."
 done
 
 xcrun simctl terminate "$device_id" com.APLDEVO.Rush-or-Risk 2>/dev/null || true
